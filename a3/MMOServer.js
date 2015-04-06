@@ -195,7 +195,7 @@ function MMOServer() {
                 // For each ship, checks if this rocket has hit the ship
                 // A rocket cannot hit its own ship.
                 for (var j in ships) {
-                    if (rockets[i] !== undefined && rockets[i].from != j) {
+                    if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].currCellIndex == ships[j].currCellIndex) {
                         if (rockets[i].hasHit(ships[j])) {
                             // tell everyone there is a hit
                             broadcast({type:"hit", rocket:i, ship:j})
@@ -294,8 +294,10 @@ function MMOServer() {
                             } else {
                                 dir = "down";
                             }
-                            ships[pid] = new Ship();
-                            ships[pid].init(x, y, dir, pid);
+                            var s = new Ship();
+                            s.init(x, y, dir, pid);
+                            s.currCellIndex = computeCell (x, y);
+                            ships[pid] = s;
                             broadcastUnless({
                                 type: "new", 
                                 id: pid, 
@@ -346,6 +348,7 @@ function MMOServer() {
                             var r = new Rocket();
                             var rocketId = (new Date ()).getTime ();
                             r.init(message.x, message.y, message.dir, pid, rocketId);
+                            r.currCellIndex = computeCell (message.x, message.y);
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
                             broadcast({
