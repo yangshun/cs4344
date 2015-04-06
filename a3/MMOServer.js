@@ -52,6 +52,17 @@ function MMOServer() {
         }
     }
 
+    /**
+     * given the 2d coordinate x,y
+     * compute the cell that the point x,y is inside
+     */
+    var computeCell = function (x, y) {
+        var cellCol = parseInt (x / (Config.WIDTH+1) * NUM_COL);
+        var cellRow = parseInt (y / (Config.HEIGHT+1) * NUM_ROW);
+        return getCellId (cellRow, cellCol);
+
+    }
+
     /*
      * private method: broadcast(msg)
      *
@@ -142,9 +153,7 @@ function MMOServer() {
         for (var i in ships) {
             var ship = ships[i];
             ship.moveOneStep();
-            var cellRow = parseInt(ship.y / (Config.HEIGHT+1) * NUM_ROW);
-            var cellCol = parseInt(ship.x / (Config.WIDTH+1) * NUM_COL);
-            var cellIndex = getCellId(cellRow, cellCol);
+            var cellIndex = computeCell(ship.x, ship.y);
             if (ship.currCellIndex !== cellIndex) {
                 // Ship has moved to another cell, transfer ship to the next cell
                 if (ship.currCellIndex) {
@@ -157,28 +166,54 @@ function MMOServer() {
 
                 ship.currCellIndex = cellIndex;
             }
-
         }
+
         for (var i in rockets) {
-            rockets[i].moveOneStep();
+            var rocket = rockets[i];
+            var deleted = false;
+            rocket.moveOneStep();
             // remove out of bounds rocket
             if (rockets[i].x < 0 || rockets[i].x > Config.WIDTH ||
                 rockets[i].y < 0 || rockets[i].y > Config.HEIGHT) {
-                rockets[i] = null;
-                delete rockets[i];
+                deleted = true;
             } else {
+                var cellIndex = computeCell(rocket.x, rocket.y);
+                if (rocket.currCellIndex !== cellIndex) {
+                    // Rocket has moved to another cell
+                    if (rocket.currCellIndex) {
+                        delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                    }
+                    cells[cellIndex].rockets[rocket.rid] = true;
+
+                    rocketCells[rocket.rid] = {};
+                    rocketCells[rocket.rid][cellIndex] = true;
+
+                    rocket.currCellIndex = cellIndex;
+                }
+
+
                 // For each ship, checks if this rocket has hit the ship
                 // A rocket cannot hit its own ship.
                 for (var j in ships) {
-                    if (rockets[i] != undefined && rockets[i].from != j) {
+                    if (rockets[i] !== undefined && rockets[i].from != j) {
                         if (rockets[i].hasHit(ships[j])) {
                             // tell everyone there is a hit
                             broadcast({type:"hit", rocket:i, ship:j})
-                            delete rockets[i];
+                            deleted = true;
+                            break;
                         }
                     } 
                 }
             }
+
+            if (deleted) {
+                // Clean up data structures that deal with interest management 
+                delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                delete rocketCells[rocket.rid];
+
+                delete rockets[i];
+            }
+
         }
     }
 
@@ -309,7 +344,8 @@ function MMOServer() {
                             // so that it knows the rocket ID).
                             var pid = players[conn.id].pid;
                             var r = new Rocket();
-                            r.init(message.x, message.y, message.dir, pid);
+                            var rocketId = (new Date ()).getTime ();
+                            r.init(message.x, message.y, message.dir, pid, rocketId);
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
                             broadcast({

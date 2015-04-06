@@ -15,6 +15,8 @@ function Rocket()
 	this.y;
 	this.dir;  // direction of the rocket
 	this.from; // ship ID of the ship that shoots this rocket
+	this.rid = null;
+	this.currentCellIndex = null;
 
 	// private:
 	var lastX;  // last updated position and time
@@ -25,7 +27,7 @@ function Rocket()
 
 	// constructor
 	var that = this;
-	this.init = function(xx, yy, dd, from) {
+	this.init = function(xx, yy, dd, from, rid) {
 		this.x = xx;
 		this.y = yy;
 		this.dir = dd;
@@ -44,6 +46,7 @@ function Rocket()
 		} else {
 			console.log("unrecognize direction " + dd);
 		}
+		that.rid = rid;
 	}
 
     /*
