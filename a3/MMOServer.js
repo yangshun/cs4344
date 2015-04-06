@@ -12,10 +12,11 @@
 var LOG_FILE = "./log.txt";                           // File name to log the traffic
 
 var LIB_PATH = "./";
-require(LIB_PATH + "Config.js");
-require(LIB_PATH + "Ship.js");
-require(LIB_PATH + "Rocket.js");
-require(LIB_PATH + "Player.js");
+require (LIB_PATH + "Config.js");
+require (LIB_PATH + "Ship.js");
+require (LIB_PATH + "Rocket.js");
+require (LIB_PATH + "Player.js");
+require (LIB_PATH + "Cell.js");
 
 function MMOServer() {
     // private Variables
@@ -25,6 +26,16 @@ function MMOServer() {
     var rockets = {}; // Associative array for rockets, indexed via timestamp
     var sockets = {}; // Associative array for sockets, indexed via player ID
     var players = {}; // Associative array for players, indexed via socket ID
+    var cells = {};   // Associative array for cells, indexed via cell ID
+
+    // Populate the cell list with empty cell
+    for (var i = 0; i < Config.NUM_ROW; i++) {
+        for (var j = 0; j < Config.NUM_COL; j++) {
+            var c = new Cell ();
+            c.init (i, j);
+            cells[c.cellId] = c;
+        }
+    }
 
     /*
      * private method: broadcast(msg)
