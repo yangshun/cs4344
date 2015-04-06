@@ -7,7 +7,9 @@
  *   node MMOServer.js
  */
 
-"use strict"; 
+"use strict";
+
+var LOG_FILE = "./log.txt";                           // File name to log the traffic
 
 var LIB_PATH = "./";
 require(LIB_PATH + "Config.js");
@@ -17,6 +19,7 @@ require(LIB_PATH + "Player.js");
 
 function MMOServer() {
     // private Variables
+    var fs;           // File system
     var nextPID = 0;  // PID to assign to next connected player 
     var ships = {};   // Associative array for ships, indexed via player ID
     var rockets = {}; // Associative array for rockets, indexed via timestamp
@@ -80,6 +83,25 @@ function MMOServer() {
         sockets[nextPID] = conn;
     }
 
+    /**
+     * private method: logToFile (fd, msg)
+     *
+     * push the msg into the write stream to log file
+     */
+    var logToFile = function (ws, msg) {
+        if (fs == undefined) {
+            console.log ("Cannot log to file. fs is not initialized.");
+            return;
+        }
+
+        if (ws == undefined) {
+            console.log ("Cannot log to file. ws is not initialized.");
+        }
+
+        ws.write (msg);
+        ws.write ("\n")
+    }
+
     /*
      * private method: gameLoop()
      *
@@ -124,6 +146,16 @@ function MMOServer() {
      * callbacks for socket.
      */
     this.start = function () {
+        // Create log file on start for logging networ traffic
+        var ws;
+        try {
+            fs = require ("fs");
+            ws = fs.createWriteStream (LOG_FILE, {flags: "w", encoding: null, fd: null})
+        } catch (e) {
+            console.log ("Cannot create log file. Make sure fs package is installed.");
+            return;
+        }
+
         try {
             var express = require('express');
             var http = require('http');
