@@ -19,7 +19,7 @@ require(LIB_PATH + "Player.js");
 
 function MMOServer() {
     // private Variables
-    var fs;           // File system
+    var logWriteStream;           // Write stream to log file
     var nextPID = 0;  // PID to assign to next connected player 
     var ships = {};   // Associative array for ships, indexed via player ID
     var rockets = {}; // Associative array for rockets, indexed via timestamp
@@ -39,6 +39,8 @@ function MMOServer() {
         for (id in sockets) {
             sockets[id].write(JSON.stringify(msg));
         }
+
+        logToFile ("Server to All:\n" + JSON.stringify(msg));
     }
 
     /*
@@ -55,18 +57,23 @@ function MMOServer() {
             if (id != pid)
                 sockets[id].write(JSON.stringify(msg));
         }
+
+        logToFile ("Server to All except " + pid + ":\n" + JSON.stringify(msg));
     }
 
     /*
-     * private method: unicast(socket, msg)
+     * private method: unicast(pid, msg)
      *
-     * unicast takes in a socket and a JSON structure 
-     * and send the message through the given socket.
+     * unicast takes in a pid and a JSON structure 
+     * and send the message through the socket associated
+     * with the pid given.
      *
-     * e.g., unicast(socket, {type: "abc", x: 30});
+     * e.g., unicast(pid, {type: "abc", x: 30});
      */
-    var unicast = function (socket, msg) {
-        socket.write(JSON.stringify(msg));
+    var unicast = function (pid, msg) {
+        sockets[pid].write(JSON.stringify(msg));
+
+        logToFile ("Server to " + pid + ":\n" + JSON.stringify(msg));
     }
 
     /*
@@ -88,18 +95,14 @@ function MMOServer() {
      *
      * push the msg into the write stream to log file
      */
-    var logToFile = function (ws, msg) {
-        if (fs == undefined) {
-            console.log ("Cannot log to file. fs is not initialized.");
-            return;
+    var logToFile = function (msg) {
+        if (logWriteStream == undefined) {
+            console.log ("Cannot log to file. Write stream is not initialized.");
         }
 
-        if (ws == undefined) {
-            console.log ("Cannot log to file. ws is not initialized.");
-        }
-
-        ws.write (msg);
-        ws.write ("\n")
+        logWriteStream.write ("Time: " + (new Date ()).getTime () + "\n");
+        logWriteStream.write (msg + "\n");
+        logWriteStream.write ("\n");
     }
 
     /*
@@ -111,7 +114,7 @@ function MMOServer() {
      */
     var gameLoop = function () {
         var i;
-        var  j;
+        var j;
         for (i in ships) {
             ships[i].moveOneStep();
         }
@@ -147,12 +150,11 @@ function MMOServer() {
      */
     this.start = function () {
         // Create log file on start for logging networ traffic
-        var ws;
         try {
-            fs = require ("fs");
-            ws = fs.createWriteStream (LOG_FILE, {flags: "w", encoding: null, fd: null})
+            var fs = require ("fs");
+            logWriteStream = fs.createWriteStream (LOG_FILE, {flags: "w"});
         } catch (e) {
-            console.log ("Cannot create log file. Make sure fs package is installed.");
+            console.log ("Cannot create log write stream. Make sure fs package is installed.");
             return;
         }
 
@@ -170,6 +172,8 @@ function MMOServer() {
                 // server/closes the window
                 conn.on('close', function () {
                     var pid = players[conn.id].pid;
+                    logToFile (pid + " to Server:\nclose connection");
+
                     delete ships[pid];
                     delete players[conn.id];
                     broadcastUnless({
@@ -186,13 +190,20 @@ function MMOServer() {
                         // no corresponding player.  don't do anything.
                         console.log("player at " + conn.id + " is invalid."); 
                         return;
-                    } 
+                    }
+
+                    // Log incoming data package
+                    var pid = players[conn.id].pid;
+                    logToFile (pid + " to Server: \n" + JSON.stringify(message));
+
+                    // Logic to deal with each type of incoming data package
                     switch (message.type) {
                         case "join":
                             // A client has requested to join. 
                             // Initialize a ship at random position
                             // and tell everyone.
                             var pid = players[conn.id].pid;
+
                             var x = Math.floor(Math.random()*Config.WIDTH);
                             var y = Math.floor(Math.random()*Config.HEIGHT);
                             var dir;
@@ -215,7 +226,7 @@ function MMOServer() {
                                 x: x,
                                 y: y,
                                 dir: dir}, pid)
-                            unicast(sockets[pid], {
+                            unicast(pid, {
                                 type: "join",
                                 id: pid,
                                 x: x,
@@ -226,7 +237,7 @@ function MMOServer() {
                             for (var i in ships) {
                                 if (i != pid) {
                                     if (ships[i] !== undefined) {
-                                        unicast(sockets[pid], {
+                                        unicast(pid, {
                                             type:"new",
                                             id: i, 
                                             x: ships[i].x, 
