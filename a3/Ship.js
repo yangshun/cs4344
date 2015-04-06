@@ -15,6 +15,8 @@ function Ship()
 	this.dir;            // current direction of ship
 	this.hitCount = 0;   // how many times this ship is hit
 	this.killCount = 0;  // how many times this ship hits other
+	this.pid = null;
+	this.currentCellIndex = null;
 
 	// private:
 	var lastX;           // To remember last position and last update time
@@ -25,12 +27,13 @@ function Ship()
 
 	// constructor
 	var that = this;
-	this.init = function(xx, yy, dd) {
+	this.init = function(xx, yy, dd, pid) {
 		lastX = xx;
 		lastY = yy;
 		lastUpdateAt = getTimestamp();
         this.x = xx;
         this.y = yy;
+        that.pid = pid;
 		that.turn(dd);
 	}
 

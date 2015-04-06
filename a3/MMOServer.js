@@ -17,6 +17,9 @@ require(LIB_PATH + "Ship.js");
 require(LIB_PATH + "Rocket.js");
 require(LIB_PATH + "Player.js");
 
+var NUM_COL = 4;        // Number of cell column
+var NUM_ROW = 4;        // Nubmer of cell row
+
 function MMOServer() {
     // private Variables
     var logWriteStream;           // Write stream to log file
@@ -25,6 +28,29 @@ function MMOServer() {
     var rockets = {}; // Associative array for rockets, indexed via timestamp
     var sockets = {}; // Associative array for sockets, indexed via player ID
     var players = {}; // Associative array for players, indexed via socket ID
+
+    var cells = {};
+    var rocketCells = {};
+    var shipCells = {};
+
+    /**
+     * private method: getCellId (row, col)
+     * take in the 2D coordinate of the cell and return
+     * the cell "unique" Id as a string
+     */
+    var getCellId = function (row, col) {
+        return row.toString() + "," + col.toString();
+    }
+
+    // Populate the cells array with empty cell object
+    for (var i = 0; i < NUM_COL; i++) {
+        for (var j = 0; j < NUM_ROW; j++) {
+            cells[getCellId(i, j)] = {
+                rockets: {},
+                ships: {}
+            };
+        }
+    }
 
     /*
      * private method: broadcast(msg)
@@ -113,12 +139,27 @@ function MMOServer() {
      * of the game
      */
     var gameLoop = function () {
-        var i;
-        var j;
-        for (i in ships) {
-            ships[i].moveOneStep();
+        for (var i in ships) {
+            var ship = ships[i];
+            ship.moveOneStep();
+            var cellRow = parseInt(ship.y / (Config.HEIGHT+1) * NUM_ROW);
+            var cellCol = parseInt(ship.x / (Config.WIDTH+1) * NUM_COL);
+            var cellIndex = getCellId(cellRow, cellCol);
+            if (ship.currCellIndex !== cellIndex) {
+                // Ship has moved to another cell, transfer ship to the next cell
+                if (ship.currCellIndex) {
+                    delete cells[ship.currCellIndex].ships[ship.pid];
+                }
+                cells[cellIndex].ships[ship.pid] = true;
+                
+                shipCells[ship.pid] = {};
+                shipCells[ship.pid][cellIndex] = true;
+
+                ship.currCellIndex = cellIndex;
+            }
+
         }
-        for (i in rockets) {
+        for (var i in rockets) {
             rockets[i].moveOneStep();
             // remove out of bounds rocket
             if (rockets[i].x < 0 || rockets[i].x > Config.WIDTH ||
@@ -128,7 +169,7 @@ function MMOServer() {
             } else {
                 // For each ship, checks if this rocket has hit the ship
                 // A rocket cannot hit its own ship.
-                for (j in ships) {
+                for (var j in ships) {
                     if (rockets[i] != undefined && rockets[i].from != j) {
                         if (rockets[i].hasHit(ships[j])) {
                             // tell everyone there is a hit
@@ -219,7 +260,7 @@ function MMOServer() {
                                 dir = "down";
                             }
                             ships[pid] = new Ship();
-                            ships[pid].init(x, y, dir);
+                            ships[pid].init(x, y, dir, pid);
                             broadcastUnless({
                                 type: "new", 
                                 id: pid, 
