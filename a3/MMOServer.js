@@ -142,6 +142,72 @@ function MMOServer() {
         logWriteStream.write ("\n");
     }
 
+    /**
+     * private method: canShipBeHit (ship, rocket)
+     *
+     * test whether the ship may be hit by the rocket.
+     * return TRUE if the ship may get hit, FALSE if
+     * the ship can not be hit no matter how the ship
+     * moves.
+     *
+     * if error detected, return TRUE as worst case
+     *
+     * Assumption:
+     * ship velocity always smaller than rocket velocity.
+     */
+    var canShipBeHit = function (ship, rocket) {
+        if (ship.VELOCITY >= rocket.VELOCITY) {
+            // Ship can always chase the rocket to let them hit
+            return true;
+        }
+
+        // Potential hit location of the rocket is where the rocket might
+        // hit the ship. Ship doesn't need to reach there in time
+        var potentialHitLocation = null;
+
+        if ((rocket.dir == "up" && rocket.y >= ship.y) ||
+            (rocket.dir == "down" && rocket.y <= ship.y))
+        {
+            potentialHitLocation = {
+                "x" : rocket.x,
+                "y" : ship.y
+            }
+        } else if ((rocket.dir == "left" && rocket.x >= ship.x) ||
+                   (rocket.dir == "right" && rocket.x <= ship.x))
+        {
+            potentialHitLocation = {
+                "x" : ship.x,
+                "y" : rocket.y
+            }
+        } else {
+            // No potentialHitLocation detected. Ship cannot be hit!
+            return false;
+        }
+
+        // Distance and time required for rocket to reach the potential hit location
+        var rocketTravelDis =   Math.abs (rocket.x - potentialHitLocation.x) + 
+                                Math.abs (rocket.y - potentialHitLocation.y);
+        var rocketTravelTime = rocketTravelDis / rocket.getVelocity ();
+
+        // Distance required for ship to reach to potential hit location
+        // We calculate the shortest path, since ship can warp around world
+        var shipTravelDis;
+        if (ship.x == potentialHitLocation.x) {
+            var diff = Math.abs (ship.y - potentialHitLocation.y);
+            shipTravelDis = Math.min (diff, Config.HEIGHT - diff);
+        } else if (ship.y == potentialHitLocation.y) {
+            var diff = Math.abs (ship.x - potentialHitLocation.x);
+            shipTravelDis = Math.min (diff, Config.WIDTH - diff);
+        } else {
+            console.log ("Something wrong in canShipBeHit function. Return true as worst case");
+            return true;
+        }
+        var shipTravelTime = shipTravelDis / ship.getVelocity ();
+
+        // Ship cannot never be hit when ship cannot reach the potential position in time
+        return shipTravelTime < rocketTravelTime;
+    }
+
     /*
      * private method: gameLoop()
      *
@@ -197,12 +263,10 @@ function MMOServer() {
                 for (var j in ships) {
                     if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].currCellIndex == ships[j].currCellIndex) {
                         if (rockets[i].hasHit(ships[j])) {
-                            // tell everyone there is a hit
-                            // TODO: Only tell the guy that is hit.
-                            
-
                             // ORIGINAL IMPLEMENTATION
-                            /*broadcast({type:"hit", rocket:i, ship:j})
+                            /*
+                            // tell everyone there is a hit
+                            broadcast({type:"hit", rocket:i, ship:j})
                             deleted = true;
                             break;*/
 
@@ -367,16 +431,47 @@ function MMOServer() {
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
 
-                            // TODO: exclude broadcast to ships that don't need to
-                            // know the existence of this bullet
-                            broadcast({
+                            // ORIGINAL IMPLEMENTATION - Broadcast fire event to all
+                            /*broadcast({
                                 type:"fire",
                                 ship: pid,
                                 rocket: rocketId,
                                 x: message.x,
                                 y: message.y,
                                 dir: message.dir
-                            });
+                            });*/
+
+                            // IM IMPLEMENTATION
+                            
+                            for (var i in ships) {
+                                // Only send message to ship that fired the rocket
+                                // or that are likely to be hit
+                                if (i == pid || canShipBeHit (ships[i], rockets[rocketId])) {
+                                    // If that ship can be hit, tell it
+                                    var msg = {
+                                        type: "fire",
+                                        ship: pid,
+                                        rocket: rocketId,
+                                        x: message.x,
+                                        y: message.y,
+                                        dir: message.dir,
+                                    };
+                                    unicast (i, msg);
+                                } else {
+                                    // If that ship cannot be hit, server can skip telling them
+                                    // Send it here for debug purposes
+                                    var msg = {
+                                        type: "fire-not-interested",
+                                        ship: pid,
+                                        rocket: rocketId,
+                                        x: message.x,
+                                        y: message.y,
+                                        dir: message.dir,
+                                    };
+                                    unicast (i, msg);
+                                }
+                            }
+
                             break;
                             
                         default:

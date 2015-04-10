@@ -23,7 +23,7 @@ function Client() {
      * a string.
      */
     var sendToServer = function (msg) {
-        console.log("send-> " + JSON.stringify(msg));
+        //console.log("send-> " + JSON.stringify(msg));
         sock.send(JSON.stringify(msg));
     }
 
@@ -40,7 +40,7 @@ function Client() {
         sock = new SockJS('http://' + Config.SERVER_NAME + ':' + Config.PORT + '/space');
         sock.onmessage = function(e) {
         var message = JSON.parse(e.data);
-            console.log(e.data);
+            //console.log(e.data);
             switch (message.type) {
                 case "join": 
                     // Server agrees to let this client join.
@@ -62,7 +62,7 @@ function Client() {
                     // Ship id just turned to dir at position (x,y)
                     var id = message.id;
                     if (ships[id] === undefined) {
-                        console.log("turn error: undefined ship " + id);
+                        //console.log("turn error: undefined ship " + id);
                     } else {
                         // We do zero-order convergence for simplicity here.
                         ships[id].jumpTo(message.x, message.y);
@@ -75,10 +75,22 @@ function Client() {
                     var sid = message.ship;
                     var rid = message.rocket;
                     if (ships[sid] === undefined) {
-                        console.log("fire error: undefined ship " + sid);
+                        //console.log("fire error: undefined ship " + sid);
                     } 
                     var r = new Rocket();
-                    r.init(message.x, message.y, message.dir, sid);
+                    r.init(message.x, message.y, message.dir, sid, null, true);
+                    rockets[rid] = r;
+                    break;
+                case "fire-not-interested":
+                    // Ship sid just fired a rocket rid in dir 
+                    // at position (x,y)
+                    var sid = message.ship;
+                    var rid = message.rocket;
+                    if (ships[sid] === undefined) {
+                        //console.log("fire error: undefined ship " + sid);
+                    } 
+                    var r = new Rocket();
+                    r.init(message.x, message.y, message.dir, sid, null, false);
                     rockets[rid] = r;
                     break;
                 case "hit":
@@ -86,7 +98,7 @@ function Client() {
                     var sid = message.ship;
                     var rid = message.rocket;
                     if (ships[sid] === undefined) {
-                        console.log("hit error: undefined ship " + sid);
+                        //console.log("hit error: undefined ship " + sid);
                     } else {
                         // If this client has been hit, increase hit count
                         ships[sid].hit();
@@ -95,7 +107,7 @@ function Client() {
                         }
                     }
                     if (rockets[rid] === undefined) {
-                        console.log("hit error: undefined rocket " + rid);
+                        //console.log("hit error: undefined rocket " + rid);
                     } else {
                         // If it is this client's rocket that hits, increase kill count
                         ships[rockets[rid].from].kill();
@@ -110,13 +122,13 @@ function Client() {
                     // Ship ID has quit. Remove the ship from the battle.
                     var id = message.id;
                     if (ships[id] === undefined) {
-                        console.log("delete error: undefined ship " + id);
+                        //console.log("delete error: undefined ship " + id);
                     } else {
                         delete ships[id];
                     }
                     break;
                 default:
-                    console.log("error: undefined command " + message.type);
+                    //console.log("error: undefined command " + message.type);
             }
         };
 

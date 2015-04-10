@@ -17,6 +17,7 @@ function Rocket()
 	this.from; // ship ID of the ship that shoots this rocket
 	this.rid = null;
 	this.currentCellIndex = null;
+	this.interestedFlag = true;
 
 	// private:
 	var lastX;  // last updated position and time
@@ -27,7 +28,7 @@ function Rocket()
 
 	// constructor
 	var that = this;
-	this.init = function(xx, yy, dd, from, rid) {
+	this.init = function(xx, yy, dd, from, rid, interested) {
 		this.x = xx;
 		this.y = yy;
 		this.dir = dd;
@@ -47,6 +48,9 @@ function Rocket()
 			console.log("unrecognize direction " + dd);
 		}
 		that.rid = rid;
+		if (interested != undefined) {
+			that.interestedFlag = interested;
+		}
 	}
 
     /*
@@ -58,6 +62,15 @@ function Rocket()
 		var deltaTime = getTimestamp() - lastUpdateAt;
 		var distance = deltaTime*VELOCITY;
 		return distance;
+	}
+
+	/**
+	 * public method: getVelocity
+	 *
+	 * return the velocity of this rocket
+	 */
+	this.getVelocity = function () {
+		return VELOCITY;
 	}
 
     /*
@@ -143,10 +156,15 @@ function Rocket()
 		try {
 			var rx = Math.round(this.x);
 			var ry = Math.round(this.y);
-			if (isSelf == true)
+			if (isSelf == true) {
 				c.fillStyle = "#ff0";
-			else
-				c.fillStyle = "#eee";
+			} else {
+				if (that.interestedFlag) {
+					c.fillStyle = "#eee";
+				} else {
+					c.fillStyle = "#f0f";
+				}
+			}
 			c.beginPath();
 			c.arc(rx,ry,2,0,2*Math.PI);
 			c.closePath();

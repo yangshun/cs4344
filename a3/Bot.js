@@ -105,6 +105,7 @@ function Bot() {
                 case "new":
                 case "turn":
                 case "fire":
+                case "fire-not-interested":
                 case "hit":
                 case "delete":
                     // A bot does not really care about these action

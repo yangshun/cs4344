@@ -48,6 +48,15 @@ function Ship()
 		return distance;
 	}
 
+	/**
+	 * public method: getVelocity
+	 *
+	 * return the velocity of this ship
+	 */
+	this.getVelocity = function () {
+		return VELOCITY;
+	}
+
     /*
      * public methods: up()/down()/left()/right()
      *
