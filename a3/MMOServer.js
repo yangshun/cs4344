@@ -9,7 +9,7 @@
 
 "use strict";
 
-var LOG_FILE = "./log.txt";                           // File name to log the traffic
+var LOG_FILE = "./log.txt";
 
 var LIB_PATH = "./";
 require(LIB_PATH + "Config.js");
@@ -17,8 +17,8 @@ require(LIB_PATH + "Ship.js");
 require(LIB_PATH + "Rocket.js");
 require(LIB_PATH + "Player.js");
 
-var NUM_COL = 4;        // Number of cell column
-var NUM_ROW = 4;        // Nubmer of cell row
+var NUM_COL = 16;        // Number of cell column
+var NUM_ROW = 16;        // Nubmer of cell row
 
 function MMOServer() {
     // private Variables
@@ -198,9 +198,24 @@ function MMOServer() {
                     if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].currCellIndex == ships[j].currCellIndex) {
                         if (rockets[i].hasHit(ships[j])) {
                             // tell everyone there is a hit
-                            broadcast({type:"hit", rocket:i, ship:j})
+                            // TODO: Only tell the guy that is hit.
+                            
+
+                            // ORIGINAL IMPLEMENTATION
+                            /*broadcast({type:"hit", rocket:i, ship:j})
                             deleted = true;
-                            break;
+                            break;*/
+
+                            // IM IMPLEMENTATION
+                            // Only send to the player that fire the rocket (for score keeping)
+                            // and the player that being hit (for damage calculation)
+                            var msg = {
+                                type: "hit",
+                                rocket: i,
+                                ship: j
+                            };
+                            unicast (rockets[i].from, msg);
+                            unicast (ships[j].pid, msg);
                         }
                     } 
                 }
@@ -351,6 +366,9 @@ function MMOServer() {
                             r.currCellIndex = computeCell (message.x, message.y);
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
+
+                            // TODO: exclude broadcast to ships that don't need to
+                            // know the existence of this bullet
                             broadcast({
                                 type:"fire",
                                 ship: pid,

@@ -204,15 +204,30 @@ function Client() {
         for (var i in ships) {
             ships[i].moveOneStep();
         }
-        // remove out-of-bound rockets
+
         for (var i in rockets) {
             rockets[i].moveOneStep();
+            
+            // remove out of bounds rocket
             if (rockets[i].x < 0 || rockets[i].x > Config.WIDTH ||
                 rockets[i].y < 0 || rockets[i].y > Config.HEIGHT) {
                 rockets[i] = null;
                 delete rockets[i];
+            } else {
+                // LOCALLY detect collision and remove the rockets
+                // without alerting the others
+                // TODO: NAIVE IMPLEMENTATION
+                for (var j in ships) {
+                    if (rockets[i] != undefined && rockets[i].from != j) {
+                        if (rockets[i].hasHit(ships[j])) {
+                            rockets[i] = null;
+                            delete rockets[i];
+                        }
+                    } 
+                }
             }
         }
+
         render();
     }
 
