@@ -226,16 +226,20 @@ function Client() {
                 rockets[i] = null;
                 delete rockets[i];
             } else {
-                // LOCALLY detect collision and remove the rockets
-                // without alerting the others
-                // TODO: NAIVE IMPLEMENTATION
-                for (var j in ships) {
-                    if (rockets[i] != undefined && rockets[i].from != j) {
-                        if (rockets[i].hasHit(ships[j])) {
-                            rockets[i] = null;
-                            delete rockets[i];
-                        }
-                    } 
+                // Do not check collision status of its own rockets
+                // These will be updated by server via 'hit'
+                if (rockets[i].from != myShip.pid) {
+                    // LOCALLY detect collision and remove the rockets
+                    // without alerting the others
+                    // TODO: NAIVE IMPLEMENTATION
+                    for (var j in ships) {
+                        if (rockets[i] != undefined && rockets[i].from != j && ) {
+                            if (rockets[i].hasHit(ships[j])) {
+                                rockets[i] = null;
+                                delete rockets[i];
+                            }
+                        } 
+                    }
                 }
             }
         }
