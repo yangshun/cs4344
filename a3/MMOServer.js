@@ -28,6 +28,8 @@ function MMOServer() {
     var rockets = {}; // Associative array for rockets, indexed via timestamp
     var sockets = {}; // Associative array for sockets, indexed via player ID
     var players = {}; // Associative array for players, indexed via socket ID
+    var totalPacketSent = 0;        // Keep track of the outgoing packets sent
+    var currentThroughput = 0;      // Current sending rate of the server
 
     var cells = {};
     var rocketCells = {};
@@ -71,13 +73,18 @@ function MMOServer() {
      *
      * e.g., broadcast({type: "abc", x: 30});
      */
-    var broadcast = function (msg) {
+    var broadcast = function (msg, debug) {
         var id;
         for (id in sockets) {
             sockets[id].write(JSON.stringify(msg));
+            if (!debug) {
+                totalPacketSent ++;
+            }
         }
 
-        logToFile ("Server to All:\n" + JSON.stringify(msg));
+        if (!debug) {
+            logToFile ("Server to All:\n" + JSON.stringify(msg));
+        }
     }
 
     /*
@@ -88,14 +95,20 @@ function MMOServer() {
      *
      * e.g., broadcast({type: "abc", x: 30}, pid);
      */
-    var broadcastUnless = function (msg, pid) {
+    var broadcastUnless = function (msg, pid, debug) {
         var id;
         for (id in sockets) {
-            if (id != pid)
+            if (id != pid) {
                 sockets[id].write(JSON.stringify(msg));
+                if (!debug) {
+                    totalPacketSent ++;
+                }
+            }
         }
 
-        logToFile ("Server to All except " + pid + ":\n" + JSON.stringify(msg));
+        if (!debug) {
+            logToFile ("Server to All except " + pid + ":\n" + JSON.stringify(msg));
+        }
     }
 
     /*
@@ -107,10 +120,12 @@ function MMOServer() {
      *
      * e.g., unicast(pid, {type: "abc", x: 30});
      */
-    var unicast = function (pid, msg) {
+    var unicast = function (pid, msg, debug) {
         sockets[pid].write(JSON.stringify(msg));
-
-        logToFile ("Server to " + pid + ":\n" + JSON.stringify(msg));
+        if (!debug) {
+            totalPacketSent ++;
+            logToFile ("Server to " + pid + ":\n" + JSON.stringify(msg));
+        }
     }
 
     /*
@@ -209,6 +224,20 @@ function MMOServer() {
     }
 
     /*
+     * private method: calculateThroughput
+     * update the currentThroughput variable!!
+     */
+    var calculateThroughput = function () {
+        // Update the current throughput variable
+        currentThroughput = totalPacketSent / Config.THROUGHPUT_CALCULATION_DURATION * 1000;
+
+        // Reset the count for next interval
+        totalPacketSent = 0;
+
+        console.log ("Current sending rate (packet/s): " + Math.round (currentThroughput));
+    }
+
+    /*
      * private method: gameLoop()
      *
      * The main game loop.  Called every interval at a
@@ -278,8 +307,8 @@ function MMOServer() {
                                 rocket: i,
                                 ship: j
                             };
-                            unicast (rockets[i].from, msg);
-                            unicast (ships[j].pid, msg);
+                            unicast (rockets[i].from, msg, false);
+                            unicast (ships[j].pid, msg, false);
                         }
                     } 
                 }
@@ -333,7 +362,7 @@ function MMOServer() {
                     delete players[conn.id];
                     broadcastUnless({
                         type: "delete", 
-                        id: pid}, pid)
+                        id: pid}, pid, false)
                 });
 
                 // When the client send something to the server.
@@ -382,13 +411,13 @@ function MMOServer() {
                                 id: pid, 
                                 x: x,
                                 y: y,
-                                dir: dir}, pid)
+                                dir: dir}, pid, false)
                             unicast(pid, {
                                 type: "join",
                                 id: pid,
                                 x: x,
                                 y: y,
-                                dir: dir});   
+                                dir: dir}, false);   
                             
                             // Tell this new guy who else is in the game.
                             for (var i in ships) {
@@ -399,7 +428,7 @@ function MMOServer() {
                                             id: i, 
                                             x: ships[i].x, 
                                             y: ships[i].y, 
-                                            dir: ships[i].dir});   
+                                            dir: ships[i].dir}, false);   
                                     }
                                 }
                             }
@@ -416,7 +445,7 @@ function MMOServer() {
                                 x: message.x, 
                                 y: message.y, 
                                 dir: message.dir
-                            }, pid);
+                            }, pid, false);
                             break;
 
                         case "fire":
@@ -444,10 +473,24 @@ function MMOServer() {
                             // IM IMPLEMENTATION
                             
                             for (var i in ships) {
+                                var sendNormal = false;
+                                var sendDebug = false;
+
                                 // Only send message to ship that fired the rocket
                                 // or that are likely to be hit
                                 if (i == pid || canShipBeHit (ships[i], rockets[rocketId])) {
                                     // If that ship can be hit, tell it
+                                    sendNormal = true;
+                                } else if (currentThroughput < Config.MAX_ESTIMATE_SEND_RATE_PER_USER * Object.keys(players).length) {
+                                    // Send if the bandwidth is underused
+                                    sendNormal = true;
+                                } else if (Config.DEBUG_MODE) {
+                                    // If that ship cannot be hit, server can skip telling them
+                                    // Send it here for debug purposes
+                                    sendDebug = true;
+                                }
+
+                                if (sendNormal) {
                                     var msg = {
                                         type: "fire",
                                         ship: pid,
@@ -456,10 +499,10 @@ function MMOServer() {
                                         y: message.y,
                                         dir: message.dir,
                                     };
-                                    unicast (i, msg);
-                                } else {
-                                    // If that ship cannot be hit, server can skip telling them
-                                    // Send it here for debug purposes
+                                    unicast (i, msg, false);
+                                }
+
+                                if (sendDebug) {
                                     var msg = {
                                         type: "fire-not-interested",
                                         ship: pid,
@@ -468,7 +511,7 @@ function MMOServer() {
                                         y: message.y,
                                         dir: message.dir,
                                     };
-                                    unicast (i, msg);
+                                    unicast (i, msg, true);
                                 }
                             }
 
@@ -481,7 +524,8 @@ function MMOServer() {
             }); // socket.on("connection"
 
             // cal the game loop
-            setInterval(function() {gameLoop();}, 1000/Config.FRAME_RATE); 
+            setInterval(function() {gameLoop();}, 1000/Config.FRAME_RATE);
+            setInterval(function() {calculateThroughput();}, Config.THROUGHPUT_CALCULATION_DURATION);
 
             // Standard code to start the server and listen
             // for connection

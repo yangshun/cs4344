@@ -233,7 +233,7 @@ function Client() {
                     // without alerting the others
                     // TODO: NAIVE IMPLEMENTATION
                     for (var j in ships) {
-                        if (rockets[i] != undefined && rockets[i].from != j && ) {
+                        if (rockets[i] != undefined && rockets[i].from != j) {
                             if (rockets[i].hasHit(ships[j])) {
                                 rockets[i] = null;
                                 delete rockets[i];
