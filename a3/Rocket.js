@@ -147,9 +147,11 @@ function Rocket()
      * public methods: draw
      *
      * Render the rocket.  
-	 * c is the HTML canvas context for drawing.
+	 	 * c is the HTML canvas context for drawing.
      * if isSelf is true, then this rocket is fired from this
      * player.  Render the rocket in yellow.
+     * if a rocket is of interest to a player,
+     * render the rocket in magenta.
      */
 	this.draw = function(c, isSelf)
 	{
