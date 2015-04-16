@@ -59,9 +59,9 @@ function MMOServer() {
      * compute the cell that the point x,y is inside
      */
     var computeCell = function (x, y) {
-        var cellCol = parseInt (x / (Config.WIDTH+1) * NUM_COL);
-        var cellRow = parseInt (y / (Config.HEIGHT+1) * NUM_ROW);
-        return getCellId (cellRow, cellCol);
+        var cellCol = parseInt(x / (Config.WIDTH+1) * NUM_COL);
+        var cellRow = parseInt(y / (Config.HEIGHT+1) * NUM_ROW);
+        return getCellId(cellRow, cellCol);
 
     }
 
@@ -148,24 +148,24 @@ function MMOServer() {
      * push the msg into the write stream to log file
      */
     var logToFile = function (msg) {
-        if (logWriteStream == undefined) {
-            console.log ("Cannot log to file. Write stream is not initialized.");
+        if (logWriteStream === undefined) {
+            console.log("Cannot log to file. Write stream is not initialized.");
         }
 
-        logWriteStream.write ("Time: " + (new Date ()).getTime () + "\n");
-        logWriteStream.write (msg + "\n");
-        logWriteStream.write ("\n");
+        logWriteStream.write("Time: " + (new Date ()).getTime () + "\n");
+        logWriteStream.write(msg + "\n");
+        logWriteStream.write("\n");
     }
 
     /**
      * private method: canShipBeHit (ship, rocket)
      *
      * test whether the ship may be hit by the rocket.
-     * return TRUE if the ship may get hit, FALSE if
+     * return true if the ship may get hit, false if
      * the ship can not be hit no matter how the ship
      * moves.
      *
-     * if error detected, return TRUE as worst case
+     * if error detected, return true as worst case
      *
      * Assumption:
      * ship velocity always smaller than rocket velocity.
@@ -180,19 +180,17 @@ function MMOServer() {
         // hit the ship. Ship doesn't need to reach there in time
         var potentialHitLocation = null;
 
-        if ((rocket.dir == "up" && rocket.y >= ship.y) ||
-            (rocket.dir == "down" && rocket.y <= ship.y))
-        {
+        if ((rocket.dir === "up" && rocket.y >= ship.y) ||
+            (rocket.dir === "down" && rocket.y <= ship.y)) {
             potentialHitLocation = {
-                "x" : rocket.x,
-                "y" : ship.y
+                x: rocket.x,
+                y: ship.y
             }
-        } else if ((rocket.dir == "left" && rocket.x >= ship.x) ||
-                   (rocket.dir == "right" && rocket.x <= ship.x))
-        {
+        } else if ((rocket.dir === "left" && rocket.x >= ship.x) ||
+                   (rocket.dir === "right" && rocket.x <= ship.x)) {
             potentialHitLocation = {
-                "x" : ship.x,
-                "y" : rocket.y
+                x : ship.x,
+                y : rocket.y
             }
         } else {
             // No potentialHitLocation detected. Ship cannot be hit!
@@ -200,24 +198,24 @@ function MMOServer() {
         }
 
         // Distance and time required for rocket to reach the potential hit location
-        var rocketTravelDis =   Math.abs (rocket.x - potentialHitLocation.x) + 
+        var rocketTravelDist = Math.abs (rocket.x - potentialHitLocation.x) + 
                                 Math.abs (rocket.y - potentialHitLocation.y);
-        var rocketTravelTime = rocketTravelDis / rocket.getVelocity ();
+        var rocketTravelTime = rocketTravelDist / rocket.getVelocity ();
 
         // Distance required for ship to reach to potential hit location
         // We calculate the shortest path, since ship can warp around world
-        var shipTravelDis;
+        var shipTravelDist;
         if (ship.x == potentialHitLocation.x) {
             var diff = Math.abs (ship.y - potentialHitLocation.y);
-            shipTravelDis = Math.min (diff, Config.HEIGHT - diff);
+            shipTravelDist = Math.min (diff, Config.HEIGHT - diff);
         } else if (ship.y == potentialHitLocation.y) {
             var diff = Math.abs (ship.x - potentialHitLocation.x);
-            shipTravelDis = Math.min (diff, Config.WIDTH - diff);
+            shipTravelDist = Math.min (diff, Config.WIDTH - diff);
         } else {
-            console.log ("Something wrong in canShipBeHit function. Return true as worst case");
+            console.log("Something wrong in canShipBeHit function. Return true as worst case");
             return true;
         }
-        var shipTravelTime = shipTravelDis / ship.getVelocity ();
+        var shipTravelTime = shipTravelDist / ship.getVelocity ();
 
         // Ship cannot never be hit when ship cannot reach the potential position in time
         return shipTravelTime < rocketTravelTime;
@@ -307,8 +305,8 @@ function MMOServer() {
                                 rocket: i,
                                 ship: j
                             };
-                            unicast (rockets[i].from, msg, false);
-                            unicast (ships[j].pid, msg, false);
+                            unicast(rockets[i].from, msg, false);
+                            unicast(ships[j].pid, msg, false);
                         }
                     } 
                 }
