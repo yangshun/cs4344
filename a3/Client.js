@@ -78,7 +78,7 @@ function Client() {
                         //console.log("fire error: undefined ship " + sid);
                     } 
                     var r = new Rocket();
-                    r.init(message.x, message.y, message.dir, sid, null, true);
+                    r.init(message.x, message.y, message.dir, sid, rid, true);
                     rockets[rid] = r;
                     break;
                 case "fire-not-interested":
@@ -90,7 +90,7 @@ function Client() {
                         //console.log("fire error: undefined ship " + sid);
                     } 
                     var r = new Rocket();
-                    r.init(message.x, message.y, message.dir, sid, null, false);
+                    r.init(message.x, message.y, message.dir, sid, rid, false);
                     rockets[rid] = r;
                     break;
                 case "hit":
@@ -98,7 +98,7 @@ function Client() {
                     var sid = message.ship;
                     var rid = message.rocket;
                     if (ships[sid] === undefined) {
-                        //console.log("hit error: undefined ship " + sid);
+                        console.log("hit error: undefined ship " + sid);
                     } else {
                         // If this client has been hit, increase hit count
                         ships[sid].hit();
@@ -107,7 +107,7 @@ function Client() {
                         }
                     }
                     if (rockets[rid] === undefined) {
-                        //console.log("hit error: undefined rocket " + rid);
+                        console.log("hit error: undefined rocket " + rid);
                     } else {
                         // If it is this client's rocket that hits, increase kill count
                         ships[rockets[rid].from].kill();
@@ -231,9 +231,8 @@ function Client() {
                 if (rockets[i].from != myShip.pid) {
                     // LOCALLY detect collision and remove the rockets
                     // without alerting the others
-                    // TODO: NAIVE IMPLEMENTATION
                     for (var j in ships) {
-                        if (rockets[i] != undefined && rockets[i].from != j) {
+                        if (myShip.pid != j && rockets[i] != undefined && rockets[i].from != j) {
                             if (rockets[i].hasHit(ships[j])) {
                                 rockets[i] = null;
                                 delete rockets[i];

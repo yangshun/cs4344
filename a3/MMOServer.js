@@ -15,8 +15,8 @@ require(LIB_PATH + "Ship.js");
 require(LIB_PATH + "Rocket.js");
 require(LIB_PATH + "Player.js");
 
-var NUM_COL = 4;        // Number of cell column
-var NUM_ROW = 4;        // Nubmer of cell row
+var NUM_COL = Config.NUM_COL;        // Number of cell column
+var NUM_ROW = Config.NUM_ROW;        // Nubmer of cell row
 
 function MMOServer() {
     // private Variables
@@ -30,9 +30,7 @@ function MMOServer() {
     var currentThroughput = 0;      // Current sending rate of the server
     var startTime = (new Date ()).getTime();
 
-    var cells = {};
-    var rocketCells = {};
-    var shipCells = {};
+    var cells = {}; // Associative array of cells, indexed via cell index
 
     /**
      * private method: getCellId (row, col)
@@ -43,7 +41,7 @@ function MMOServer() {
         return row.toString() + "," + col.toString();
     }
 
-    // Populate the cells array with empty cell object
+    // Populate the cells associative array with empty cells object
     for (var i = 0; i < NUM_COL; i++) {
         for (var j = 0; j < NUM_ROW; j++) {
             cells[getCellId(i, j)] = {
@@ -57,7 +55,7 @@ function MMOServer() {
      * given the 2d coordinate x,y
      * compute the cell that the point x,y is inside
      */
-    var computeCell = function (x, y) {
+    var computeCellIndex = function (x, y) {
         var cellCol = parseInt(x / (Config.WIDTH+1) * NUM_COL);
         var cellRow = parseInt(y / (Config.HEIGHT+1) * NUM_ROW);
         return getCellId(cellRow, cellCol);
@@ -225,7 +223,7 @@ function MMOServer() {
         // Reset the count for next interval
         totalPacketSent = 0;
 
-        console.log ("Current sending rate (packet/s): " + Math.round(currentThroughput));
+        // console.log ("Current sending rate (packet/s): " + Math.round(currentThroughput));
     }
 
     /*
@@ -236,83 +234,83 @@ function MMOServer() {
      * of the game
      */
     var gameLoop = function () {
+
         for (var i in ships) {
             var ship = ships[i];
             ship.moveOneStep();
-            var cellIndex = computeCell(ship.x, ship.y);
+            var cellIndex = computeCellIndex(ship.x, ship.y);
             if (ship.currCellIndex !== cellIndex) {
                 // Ship has moved to another cell, transfer ship to the next cell
                 if (ship.currCellIndex) {
                     delete cells[ship.currCellIndex].ships[ship.pid];
                 }
                 cells[cellIndex].ships[ship.pid] = true;
-                
-                shipCells[ship.pid] = {};
-                shipCells[ship.pid][cellIndex] = true;
-
                 ship.currCellIndex = cellIndex;
             }
         }
 
         for (var i in rockets) {
             var rocket = rockets[i];
-            var deleted = false;
             rocket.moveOneStep();
             // remove out of bounds rocket
             if (rockets[i].x < 0 || rockets[i].x > Config.WIDTH ||
                 rockets[i].y < 0 || rockets[i].y > Config.HEIGHT) {
-                deleted = true;
+
+                // Clean up data structures that deal with interest management 
+                delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                delete rockets[i];
             } else {
-                var cellIndex = computeCell(rocket.x, rocket.y);
+                var cellIndex = computeCellIndex(rocket.x, rocket.y);
                 if (rocket.currCellIndex !== cellIndex) {
                     // Rocket has moved to another cell
                     if (rocket.currCellIndex) {
                         delete cells[rocket.currCellIndex].rockets[rocket.rid];
                     }
                     cells[cellIndex].rockets[rocket.rid] = true;
-
-                    rocketCells[rocket.rid] = {};
-                    rocketCells[rocket.rid][cellIndex] = true;
-
                     rocket.currCellIndex = cellIndex;
                 }
+            }
+        }
 
 
-                // For each ship, checks if this rocket has hit the ship
-                // A rocket cannot hit its own ship.
-                for (var j in ships) {
-                    if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].currCellIndex == ships[j].currCellIndex) {
-                        if (rockets[i].hasHit(ships[j])) {
-                            if (Config.INTEREST_MANAGEMENT) {
-                                // Only send to the player that fire the rocket (for score keeping)
-                                // and the player that being hit (for damage calculation)
-                                var msg = {
-                                    type: "hit",
-                                    rocket: i,
-                                    ship: j
-                                };
-                                unicast(rockets[i].from, msg, false);
-                                unicast(ships[j].pid, msg, false);
-                            } else {
-                                // tell everyone there is a hit
-                                broadcast({type:"hit", rocket:i, ship:j})
-                                deleted = true;
-                                break;
-                            }
+        for (var c in cells) {
+            // Iterate among rockets and ships within the same cell.
+            var cellRockets = cells[c].rockets;
+            var cellShips = cells[c].ships;
+
+            for (var i in cellRockets) {
+                var deleted = false;
+                for (var j in cellShips) {
+                    if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].hasHit(ships[j])) {
+                        deleted = true;
+                        console.log('hit', i, j);
+                        if (Config.INTEREST_MANAGEMENT) {
+                            // Only send to the player that fire the rocket (for scorekeeping)
+                            // and the player that being hit (for damage calculation)
+                            var msg = {
+                                type: "hit",
+                                rocket: i,
+                                ship: j
+                            };
+                            unicast(rockets[i].from, msg, false);
+                            unicast(ships[j].pid, msg, false);
+                        } else {
+                            // Tell everyone there is a hit
+                            broadcast({
+                                type: "hit", 
+                                rocket: i, 
+                                ship: j
+                            });
                         }
-                    } 
+                    }
+                }
+                if (deleted) {
+                    delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                    delete rockets[i];
                 }
             }
-
-            if (deleted) {
-                // Clean up data structures that deal with interest management 
-                delete cells[rocket.currCellIndex].rockets[rocket.rid];
-                delete rocketCells[rocket.rid];
-
-                delete rockets[i];
-            }
-
         }
+
     }
 
     /*
@@ -393,7 +391,7 @@ function MMOServer() {
                             }
                             var s = new Ship();
                             s.init(x, y, dir, pid);
-                            s.currCellIndex = computeCell (x, y);
+                            s.currCellIndex = computeCellIndex (x, y);
                             ships[pid] = s;
                             broadcastUnless({
                                     type: "new", 
@@ -448,7 +446,7 @@ function MMOServer() {
                             var r = new Rocket();
                             var rocketId = (new Date ()).getTime();
                             r.init(message.x, message.y, message.dir, pid, rocketId);
-                            r.currCellIndex = computeCell (message.x, message.y);
+                            r.currCellIndex = computeCellIndex (message.x, message.y);
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
 
