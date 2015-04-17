@@ -139,6 +139,10 @@ function MMOServer() {
      * push the msg into the write stream to log file
      */
     var logToFile = function (ev, recipient) {
+        if (!Config.LOG_EVENTS) {
+            return;
+        }
+
         if (logWriteStream === undefined) {
             console.log('Cannot log to file. Write stream is not initialized.');
         }
@@ -322,13 +326,15 @@ function MMOServer() {
      */
     this.start = function () {
         // Create log file on start for logging networ traffic
-        try {
-            var fs = require ("fs");
-            logWriteStream = fs.createWriteStream('log-' + startTime + '.csv', {flags: "w"});
-            logWriteStream.write('Time,Event,Recipient\n');
-        } catch (e) {
-            console.log ("Cannot create log write stream. Make sure fs package is installed.");
-            return;
+        if (Config.LOG_EVENTS) {
+            try {
+                var fs = require ("fs");
+                logWriteStream = fs.createWriteStream('log-' + startTime + '.csv', {flags: "w"});
+                logWriteStream.write('Time,Event,Recipient\n');
+            } catch (e) {
+                console.log ("Cannot create log write stream. Make sure fs package is installed.");
+                return;
+            }
         }
 
         try {

@@ -23,6 +23,7 @@ var Config = {
 	MAX_ESTIMATE_SEND_RATE_PER_USER : 0,	// 	Estimate the maximum sending rate per user. 
 											//	Set to non-zero to enable the feature where extra messages
 											//	can be sent where network is not congested.
+	LOG_EVENTS: false
 }
 
 
