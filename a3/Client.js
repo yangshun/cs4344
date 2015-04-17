@@ -225,7 +225,7 @@ function Client() {
                 rockets[i].y < 0 || rockets[i].y > Config.HEIGHT) {
                 rockets[i] = null;
                 delete rockets[i];
-            } else {
+            } else if (Config.INTEREST_MANAGEMENT) {
                 // Do not check collision status of its own rockets
                 // These will be updated by server via 'hit'
                 if (rockets[i].from != myShip.pid) {

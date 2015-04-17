@@ -178,13 +178,13 @@ function MMOServer() {
             potentialHitLocation = {
                 x: rocket.x,
                 y: ship.y
-            }
+            };
         } else if ((rocket.dir === "left" && rocket.x >= ship.x) ||
                    (rocket.dir === "right" && rocket.x <= ship.x)) {
             potentialHitLocation = {
                 x : ship.x,
                 y : rocket.y
-            }
+            };
         } else {
             // No potentialHitLocation detected. Ship cannot be hit!
             return false;
@@ -283,23 +283,22 @@ function MMOServer() {
                 for (var j in ships) {
                     if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].currCellIndex == ships[j].currCellIndex) {
                         if (rockets[i].hasHit(ships[j])) {
-                            // ORIGINAL IMPLEMENTATION
-                            /*
-                            // tell everyone there is a hit
-                            broadcast({type:"hit", rocket:i, ship:j})
-                            deleted = true;
-                            break;*/
-
-                            // IM IMPLEMENTATION
-                            // Only send to the player that fire the rocket (for score keeping)
-                            // and the player that being hit (for damage calculation)
-                            var msg = {
-                                type: "hit",
-                                rocket: i,
-                                ship: j
-                            };
-                            unicast(rockets[i].from, msg, false);
-                            unicast(ships[j].pid, msg, false);
+                            if (Config.INTEREST_MANAGEMENT) {
+                                // Only send to the player that fire the rocket (for score keeping)
+                                // and the player that being hit (for damage calculation)
+                                var msg = {
+                                    type: "hit",
+                                    rocket: i,
+                                    ship: j
+                                };
+                                unicast(rockets[i].from, msg, false);
+                                unicast(ships[j].pid, msg, false);
+                            } else {
+                                // tell everyone there is a hit
+                                broadcast({type:"hit", rocket:i, ship:j})
+                                deleted = true;
+                                break;
+                            }
                         }
                     } 
                 }
@@ -450,59 +449,59 @@ function MMOServer() {
                             var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
 
-                            // ORIGINAL IMPLEMENTATION - Broadcast fire event to all
-                            /*broadcast({
-                                type:"fire",
-                                ship: pid,
-                                rocket: rocketId,
-                                x: message.x,
-                                y: message.y,
-                                dir: message.dir
-                            });*/
+                            if (Config.INTEREST_MANAGEMENT) {
+                                for (var i in ships) {
+                                    var sendNormal = false;
+                                    var sendDebug = false;
 
-                            // IM IMPLEMENTATION
-                            
-                            for (var i in ships) {
-                                var sendNormal = false;
-                                var sendDebug = false;
+                                    // Only send message to ship that fired the rocket
+                                    // or that are likely to be hit
+                                    if (i == pid || canShipBeHit (ships[i], rockets[rocketId])) {
+                                        // If that ship can be hit, tell it
+                                        sendNormal = true;
+                                    } else if (currentThroughput < Config.MAX_ESTIMATE_SEND_RATE_PER_USER * Object.keys(players).length) {
+                                        // Send if the bandwidth is underused
+                                        sendNormal = true;
+                                    } else if (Config.DEBUG_MODE) {
+                                        // If that ship cannot be hit, server can skip telling them
+                                        // Send it here for debug purposes
+                                        sendDebug = true;
+                                    }
 
-                                // Only send message to ship that fired the rocket
-                                // or that are likely to be hit
-                                if (i == pid || canShipBeHit (ships[i], rockets[rocketId])) {
-                                    // If that ship can be hit, tell it
-                                    sendNormal = true;
-                                } else if (currentThroughput < Config.MAX_ESTIMATE_SEND_RATE_PER_USER * Object.keys(players).length) {
-                                    // Send if the bandwidth is underused
-                                    sendNormal = true;
-                                } else if (Config.DEBUG_MODE) {
-                                    // If that ship cannot be hit, server can skip telling them
-                                    // Send it here for debug purposes
-                                    sendDebug = true;
+                                    if (sendNormal) {
+                                        var msg = {
+                                            type: "fire",
+                                            ship: pid,
+                                            rocket: rocketId,
+                                            x: message.x,
+                                            y: message.y,
+                                            dir: message.dir,
+                                        };
+                                        unicast(i, msg, false);
+                                    }
+
+                                    if (sendDebug) {
+                                        var msg = {
+                                            type: "fire-not-interested",
+                                            ship: pid,
+                                            rocket: rocketId,
+                                            x: message.x,
+                                            y: message.y,
+                                            dir: message.dir,
+                                        };
+                                        unicast(i, msg, true);
+                                    }
                                 }
-
-                                if (sendNormal) {
-                                    var msg = {
-                                        type: "fire",
-                                        ship: pid,
-                                        rocket: rocketId,
-                                        x: message.x,
-                                        y: message.y,
-                                        dir: message.dir,
-                                    };
-                                    unicast(i, msg, false);
-                                }
-
-                                if (sendDebug) {
-                                    var msg = {
-                                        type: "fire-not-interested",
-                                        ship: pid,
-                                        rocket: rocketId,
-                                        x: message.x,
-                                        y: message.y,
-                                        dir: message.dir,
-                                    };
-                                    unicast(i, msg, true);
-                                }
+                            } else {
+                                // Broadcast fire event to all
+                                broadcast({
+                                    type:"fire",
+                                    ship: pid,
+                                    rocket: rocketId,
+                                    x: message.x,
+                                    y: message.y,
+                                    dir: message.dir
+                                });
                             }
 
                             break;
