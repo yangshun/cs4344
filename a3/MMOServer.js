@@ -41,16 +41,6 @@ function MMOServer() {
         return row.toString() + "," + col.toString();
     }
 
-    // Populate the cells associative array with empty cells object
-    for (var i = 0; i < NUM_COL; i++) {
-        for (var j = 0; j < NUM_ROW; j++) {
-            cells[getCellId(i, j)] = {
-                rockets: {},
-                ships: {}
-            };
-        }
-    }
-
     /**
      * given the 2d coordinate x,y
      * compute the cell that the point x,y is inside
@@ -239,40 +229,35 @@ function MMOServer() {
      */
     var gameLoop = function () {
 
+        // Reinitialize all the cells
+        for (var i = 0; i < NUM_COL; i++) {
+            for (var j = 0; j < NUM_ROW; j++) {
+                cells[getCellId(i, j)] = {
+                    rockets: {},
+                    ships: {}
+                };
+            }
+        }
+
+        // Add ships to their respective cells
         for (var i in ships) {
             var ship = ships[i];
             ship.moveOneStep();
             var cellIndex = computeCellIndex(ship.x, ship.y);
-            if (ship.currCellIndex !== cellIndex) {
-                // Ship has moved to another cell, transfer ship to the next cell
-                if (ship.currCellIndex) {
-                    delete cells[ship.currCellIndex].ships[ship.pid];
-                }
-                cells[cellIndex].ships[ship.pid] = true;
-                ship.currCellIndex = cellIndex;
-            }
+            cells[cellIndex].ships[ship.pid] = true;
         }
 
+        // Add remaining rockets to their respective cells
         for (var i in rockets) {
             var rocket = rockets[i];
             rocket.moveOneStep();
             // remove out of bounds rocket
             if (rockets[i].x < 0 || rockets[i].x > Config.WIDTH ||
                 rockets[i].y < 0 || rockets[i].y > Config.HEIGHT) {
-
-                // Clean up data structures that deal with interest management 
-                delete cells[rocket.currCellIndex].rockets[rocket.rid];
                 delete rockets[i];
             } else {
                 var cellIndex = computeCellIndex(rocket.x, rocket.y);
-                if (rocket.currCellIndex !== cellIndex) {
-                    // Rocket has moved to another cell
-                    if (rocket.currCellIndex) {
-                        delete cells[rocket.currCellIndex].rockets[rocket.rid];
-                    }
-                    cells[cellIndex].rockets[rocket.rid] = true;
-                    rocket.currCellIndex = cellIndex;
-                }
+                cells[cellIndex].rockets[rocket.rid] = true;
             }
         }
 
@@ -281,14 +266,12 @@ function MMOServer() {
             // Iterate among rockets and ships within the same cell.
             var cellRockets = cells[c].rockets;
             var cellShips = cells[c].ships;
-            // console.log("Cell:", c, "Ship", Object.keys(cellShips).length, "Rkts", Object.keys(cellRockets).length);
             for (var i in cellRockets) {
                 var deleted = false;
                 for (var j in cellShips) {
                     if (rockets[i] !== undefined && 
                         rockets[i].from != j && 
                         rockets[i].hasHit(ships[j])) {
-
                         deleted = true;
                         if (Config.INTEREST_MANAGEMENT) {
                             // Only send to the player that fire the rocket (for scorekeeping)
@@ -311,13 +294,10 @@ function MMOServer() {
                     }
                 }
                 if (deleted) {
-                    delete cells[rocket.currCellIndex].rockets[i];
                     delete rockets[i];
                 }
             }
         }
-        // console.log('--------Global Ships:', Object.keys(ships).length, ' Rkts:', Object.keys(rockets).length);
-        // console.log('\n\n\n\n\n');
     }
 
     /*
