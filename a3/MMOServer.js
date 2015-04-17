@@ -277,7 +277,7 @@ function MMOServer() {
         }
 
 
-/*        for (var c in cells) {
+        for (var c in cells) {
             // Iterate among rockets and ships within the same cell.
             var cellRockets = cells[c].rockets;
             var cellShips = cells[c].ships;
@@ -313,9 +313,9 @@ function MMOServer() {
                     delete rockets[i];
                 }
             }
-        }*/
+        }
 
-        for (var i in rockets) {
+        /*for (var i in rockets) {
             var deleted = false;
             for (var j in ships) {
                 if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].hasHit(ships[j])) {
@@ -345,7 +345,7 @@ function MMOServer() {
                 delete cells[rocket.currCellIndex].rockets[rocket.rid];
                 delete rockets[i];
             }
-        }
+        }*/
 
     }
 
