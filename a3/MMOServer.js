@@ -15,8 +15,8 @@ require(LIB_PATH + "Ship.js");
 require(LIB_PATH + "Rocket.js");
 require(LIB_PATH + "Player.js");
 
-var NUM_COL = 16;        // Number of cell column
-var NUM_ROW = 16;        // Nubmer of cell row
+var NUM_COL = 4;        // Number of cell column
+var NUM_ROW = 4;        // Nubmer of cell row
 
 function MMOServer() {
     // private Variables
