@@ -47,7 +47,7 @@ function Client() {
                     myId = message.id;
                     ships[myId] = new Ship();
                     myShip = ships[myId];
-                    myShip.init(message.x, message.y, message.dir);
+                    myShip.init(message.x, message.y, message.dir, myId);
 
                     // Start the game loop
                     setInterval(function() {gameLoop();}, 1000/Config.FRAME_RATE); 
@@ -56,7 +56,7 @@ function Client() {
                     // Add a ship to the battlefield.
                     var id = message.id;
                     ships[id] = new Ship();
-                    ships[id].init(message.x, message.y, message.dir);
+                    ships[id].init(message.x, message.y, message.dir, id);
                     break;
                 case "turn":
                     // Ship id just turned to dir at position (x,y)

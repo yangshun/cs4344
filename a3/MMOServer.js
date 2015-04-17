@@ -277,7 +277,7 @@ function MMOServer() {
         }
 
 
-        for (var c in cells) {
+/*        for (var c in cells) {
             // Iterate among rockets and ships within the same cell.
             var cellRockets = cells[c].rockets;
             var cellShips = cells[c].ships;
@@ -312,6 +312,38 @@ function MMOServer() {
                     delete cells[rocket.currCellIndex].rockets[rocket.rid];
                     delete rockets[i];
                 }
+            }
+        }*/
+
+        for (var i in rockets) {
+            var deleted = false;
+            for (var j in ships) {
+                if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].hasHit(ships[j])) {
+                    deleted = true;
+                    console.log('hit', i, j);
+                    if (Config.INTEREST_MANAGEMENT) {
+                        // Only send to the player that fire the rocket (for scorekeeping)
+                        // and the player that being hit (for damage calculation)
+                        var msg = {
+                            type: "hit",
+                            rocket: i,
+                            ship: j
+                        };
+                        unicast(rockets[i].from, msg, false);
+                        unicast(ships[j].pid, msg, false);
+                    } else {
+                        // Tell everyone there is a hit
+                        broadcast({
+                            type: "hit", 
+                            rocket: i, 
+                            ship: j
+                        });
+                    }
+                }
+            }
+            if (deleted) {
+                delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                delete rockets[i];
             }
         }
 
