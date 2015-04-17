@@ -281,13 +281,15 @@ function MMOServer() {
             // Iterate among rockets and ships within the same cell.
             var cellRockets = cells[c].rockets;
             var cellShips = cells[c].ships;
-
+            // console.log("Cell:", c, "Ship", Object.keys(cellShips).length, "Rkts", Object.keys(cellRockets).length);
             for (var i in cellRockets) {
                 var deleted = false;
                 for (var j in cellShips) {
-                    if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].hasHit(ships[j])) {
+                    if (rockets[i] !== undefined && 
+                        rockets[i].from != j && 
+                        rockets[i].hasHit(ships[j])) {
+
                         deleted = true;
-                        console.log('hit', i, j);
                         if (Config.INTEREST_MANAGEMENT) {
                             // Only send to the player that fire the rocket (for scorekeeping)
                             // and the player that being hit (for damage calculation)
@@ -309,44 +311,13 @@ function MMOServer() {
                     }
                 }
                 if (deleted) {
-                    delete cells[rocket.currCellIndex].rockets[rocket.rid];
+                    delete cells[rocket.currCellIndex].rockets[i];
                     delete rockets[i];
                 }
             }
         }
-
-        /*for (var i in rockets) {
-            var deleted = false;
-            for (var j in ships) {
-                if (rockets[i] !== undefined && rockets[i].from != j && rockets[i].hasHit(ships[j])) {
-                    deleted = true;
-                    console.log('hit', i, j);
-                    if (Config.INTEREST_MANAGEMENT) {
-                        // Only send to the player that fire the rocket (for scorekeeping)
-                        // and the player that being hit (for damage calculation)
-                        var msg = {
-                            type: "hit",
-                            rocket: i,
-                            ship: j
-                        };
-                        unicast(rockets[i].from, msg, false);
-                        unicast(ships[j].pid, msg, false);
-                    } else {
-                        // Tell everyone there is a hit
-                        broadcast({
-                            type: "hit", 
-                            rocket: i, 
-                            ship: j
-                        });
-                    }
-                }
-            }
-            if (deleted) {
-                delete cells[rocket.currCellIndex].rockets[rocket.rid];
-                delete rockets[i];
-            }
-        }*/
-
+        // console.log('--------Global Ships:', Object.keys(ships).length, ' Rkts:', Object.keys(rockets).length);
+        // console.log('\n\n\n\n\n');
     }
 
     /*
@@ -429,7 +400,6 @@ function MMOServer() {
                             }
                             var s = new Ship();
                             s.init(x, y, dir, pid);
-                            s.currCellIndex = computeCellIndex (x, y);
                             ships[pid] = s;
                             broadcastUnless({
                                     type: "new", 
@@ -482,10 +452,8 @@ function MMOServer() {
                             // so that it knows the rocket ID).
                             var pid = players[conn.id].pid;
                             var r = new Rocket();
-                            var rocketId = (new Date ()).getTime();
+                            var rocketId = (new Date()).getTime();
                             r.init(message.x, message.y, message.dir, pid, rocketId);
-                            r.currCellIndex = computeCellIndex (message.x, message.y);
-                            var rocketId = new Date().getTime();
                             rockets[rocketId] = r;
 
                             if (Config.INTEREST_MANAGEMENT) {
