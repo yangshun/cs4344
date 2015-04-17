@@ -78,12 +78,9 @@ function MMOServer() {
         for (id in sockets) {
             sockets[id].write(JSON.stringify(msg));
             if (!debug) {
-                totalPacketSent ++;
+                logToFile(msg.type, id);
+                totalPacketSent++;
             }
-        }
-
-        if (!debug) {
-            logToFile ("Server to All:\n" + JSON.stringify(msg));
         }
     }
 
@@ -101,13 +98,10 @@ function MMOServer() {
             if (id != pid) {
                 sockets[id].write(JSON.stringify(msg));
                 if (!debug) {
+                    logToFile(msg.type, id);
                     totalPacketSent ++;
                 }
             }
-        }
-
-        if (!debug) {
-            logToFile ("Server to All except " + pid + ":\n" + JSON.stringify(msg));
         }
     }
 
@@ -124,7 +118,7 @@ function MMOServer() {
         sockets[pid].write(JSON.stringify(msg));
         if (!debug) {
             totalPacketSent ++;
-            logToFile ("Server to " + pid + ":\n" + JSON.stringify(msg));
+            logToFile(msg.type, pid);
         }
     }
 
@@ -147,14 +141,14 @@ function MMOServer() {
      *
      * push the msg into the write stream to log file
      */
-    var logToFile = function (msg) {
+    var logToFile = function (ev, recipient) {
         if (logWriteStream === undefined) {
-            console.log("Cannot log to file. Write stream is not initialized.");
+            console.log('Cannot log to file. Write stream is not initialized.');
         }
+        var date = (new Date ()).getTime();
+        var msg = [date.toString(), ev, recipient.toString()].join(',') + '\n';
 
-        logWriteStream.write("Time: " + (new Date ()).getTime () + "\n");
-        logWriteStream.write(msg + "\n");
-        logWriteStream.write("\n");
+        logWriteStream.write(msg);
     }
 
     /**
@@ -334,7 +328,8 @@ function MMOServer() {
         // Create log file on start for logging networ traffic
         try {
             var fs = require ("fs");
-            logWriteStream = fs.createWriteStream (LOG_FILE, {flags: "w"});
+            logWriteStream = fs.createWriteStream(LOG_FILE, {flags: "w"});
+            logWriteStream.write('Time,Event,Recipient\n');
         } catch (e) {
             console.log ("Cannot create log write stream. Make sure fs package is installed.");
             return;
@@ -354,7 +349,6 @@ function MMOServer() {
                 // server/closes the window
                 conn.on('close', function () {
                     var pid = players[conn.id].pid;
-                    logToFile (pid + " to Server:\nclose connection");
 
                     delete ships[pid];
                     delete players[conn.id];
@@ -376,7 +370,6 @@ function MMOServer() {
 
                     // Log incoming data package
                     var pid = players[conn.id].pid;
-                    logToFile (pid + " to Server: \n" + JSON.stringify(message));
 
                     // Logic to deal with each type of incoming data package
                     switch (message.type) {
