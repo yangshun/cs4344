@@ -28,6 +28,7 @@ function MMOServer() {
     var players = {}; // Associative array for players, indexed via socket ID
     var totalPacketSent = 0;        // Keep track of the outgoing packets sent
     var currentThroughput = 0;      // Current sending rate of the server
+    var startTime = (new Date ()).getTime();
 
     var cells = {};
     var rocketCells = {};
@@ -143,7 +144,7 @@ function MMOServer() {
         if (logWriteStream === undefined) {
             console.log('Cannot log to file. Write stream is not initialized.');
         }
-        var date = (new Date ()).getTime();
+        var date = parseInt(((new Date ()).getTime() - startTime) / 1000);
         var msg = [date.toString(), ev, recipient.toString()].join(',') + '\n';
 
         logWriteStream.write(msg);
@@ -326,7 +327,7 @@ function MMOServer() {
         // Create log file on start for logging networ traffic
         try {
             var fs = require ("fs");
-            logWriteStream = fs.createWriteStream('log-' + (new Date ()).getTime() + '.csv', {flags: "w"});
+            logWriteStream = fs.createWriteStream('log-' + startTime + '.csv', {flags: "w"});
             logWriteStream.write('Time,Event,Recipient\n');
         } catch (e) {
             console.log ("Cannot create log write stream. Make sure fs package is installed.");
