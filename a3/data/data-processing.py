@@ -31,20 +31,28 @@ def main(filename):
         timestamps[timestamp][event] += 1
 
     output = []
-    cumulative_hit = 0;
-    cumulative_fire = 0;
+    events = ['fire', 'hit', 'turn', 'join', 'new']
+    cumulative = {}
+    for event in events:
+        cumulative[event] = 0
+
     unique_timestamps = timestamps.keys()
     unique_timestamps.sort()
     for timestamp in unique_timestamps:
-        if 'fire' in timestamps[timestamp]:
-            cumulative_fire += timestamps[timestamp]['fire']
-        if 'hit' in timestamps[timestamp]:
-            cumulative_hit += timestamps[timestamp]['hit']
-        output.append([timestamp, cumulative_hit, cumulative_fire, cumulative_hit + cumulative_fire])
+        row = [timestamp]
+        total = 0
+        for event in events:
+            if event in timestamps[timestamp]:
+                cumulative[event] += timestamps[timestamp][event]
+            total += cumulative[event]
+            row.append(cumulative[event]) 
+        row.append(total)
+
+        output.append(row)
 
     with open(filename.split('.')[0] + '-processed.csv', 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        header = ['Time', 'Hit', 'Fire', 'Total']
+        header = ['timestamp', 'fire', 'hit', 'turn', 'join', 'new', 'total']
         writer.writerow(header)
         for row in output:
             writer.writerow(row)
