@@ -191,19 +191,19 @@ function MMOServer() {
         }
 
         // Distance and time required for rocket to reach the potential hit location
-        var rocketTravelDist = Math.abs (rocket.x - potentialHitLocation.x) + 
-                                Math.abs (rocket.y - potentialHitLocation.y);
+        var rocketTravelDist = Math.abs(rocket.x - potentialHitLocation.x) + 
+                                Math.abs(rocket.y - potentialHitLocation.y);
         var rocketTravelTime = rocketTravelDist / rocket.getVelocity ();
 
         // Distance required for ship to reach to potential hit location
         // We calculate the shortest path, since ship can warp around world
         var shipTravelDist;
         if (ship.x == potentialHitLocation.x) {
-            var diff = Math.abs (ship.y - potentialHitLocation.y);
-            shipTravelDist = Math.min (diff, Config.HEIGHT - diff);
+            var diff = Math.abs(ship.y - potentialHitLocation.y);
+            shipTravelDist = Math.min(diff, Config.HEIGHT - diff);
         } else if (ship.y == potentialHitLocation.y) {
-            var diff = Math.abs (ship.x - potentialHitLocation.x);
-            shipTravelDist = Math.min (diff, Config.WIDTH - diff);
+            var diff = Math.abs(ship.x - potentialHitLocation.x);
+            shipTravelDist = Math.min(diff, Config.WIDTH - diff);
         } else {
             console.log("Something wrong in canShipBeHit function. Return true as worst case");
             return true;
@@ -225,7 +225,7 @@ function MMOServer() {
         // Reset the count for next interval
         totalPacketSent = 0;
 
-        console.log ("Current sending rate (packet/s): " + Math.round (currentThroughput));
+        console.log ("Current sending rate (packet/s): " + Math.round(currentThroughput));
     }
 
     /*
@@ -396,28 +396,31 @@ function MMOServer() {
                             s.currCellIndex = computeCell (x, y);
                             ships[pid] = s;
                             broadcastUnless({
-                                type: "new", 
-                                id: pid, 
-                                x: x,
-                                y: y,
-                                dir: dir}, pid, false)
+                                    type: "new", 
+                                    id: pid, 
+                                    x: x,
+                                    y: y,
+                                    dir: dir
+                                }, pid, false);
                             unicast(pid, {
-                                type: "join",
-                                id: pid,
-                                x: x,
-                                y: y,
-                                dir: dir}, false);   
+                                    type: "join",
+                                    id: pid,
+                                    x: x,
+                                    y: y,
+                                    dir: dir
+                                }, false);
                             
                             // Tell this new guy who else is in the game.
                             for (var i in ships) {
                                 if (i != pid) {
                                     if (ships[i] !== undefined) {
                                         unicast(pid, {
-                                            type:"new",
-                                            id: i, 
-                                            x: ships[i].x, 
-                                            y: ships[i].y, 
-                                            dir: ships[i].dir}, false);   
+                                                type: "new",
+                                                id: i, 
+                                                x: ships[i].x, 
+                                                y: ships[i].y, 
+                                                dir: ships[i].dir
+                                            }, false);   
                                     }
                                 }
                             }
@@ -429,12 +432,12 @@ function MMOServer() {
                             ships[pid].jumpTo(message.x, message.y);
                             ships[pid].turn(message.dir);
                             broadcastUnless({
-                                type:"turn",
-                                id: pid,
-                                x: message.x, 
-                                y: message.y, 
-                                dir: message.dir
-                            }, pid, false);
+                                    type: "turn",
+                                    id: pid,
+                                    x: message.x, 
+                                    y: message.y, 
+                                    dir: message.dir
+                                }, pid, false);
                             break;
 
                         case "fire":
