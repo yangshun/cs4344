@@ -9,8 +9,6 @@
 
 "use strict";
 
-var LOG_FILE = "./log.txt";
-
 var LIB_PATH = "./";
 require(LIB_PATH + "Config.js");
 require(LIB_PATH + "Ship.js");
@@ -328,7 +326,7 @@ function MMOServer() {
         // Create log file on start for logging networ traffic
         try {
             var fs = require ("fs");
-            logWriteStream = fs.createWriteStream(LOG_FILE, {flags: "w"});
+            logWriteStream = fs.createWriteStream('log-' + (new Date ()).getTime() + '.csv', {flags: "w"});
             logWriteStream.write('Time,Event,Recipient\n');
         } catch (e) {
             console.log ("Cannot create log write stream. Make sure fs package is installed.");
@@ -445,7 +443,7 @@ function MMOServer() {
                             // so that it knows the rocket ID).
                             var pid = players[conn.id].pid;
                             var r = new Rocket();
-                            var rocketId = (new Date ()).getTime ();
+                            var rocketId = (new Date ()).getTime();
                             r.init(message.x, message.y, message.dir, pid, rocketId);
                             r.currCellIndex = computeCell (message.x, message.y);
                             var rocketId = new Date().getTime();
@@ -490,7 +488,7 @@ function MMOServer() {
                                         y: message.y,
                                         dir: message.dir,
                                     };
-                                    unicast (i, msg, false);
+                                    unicast(i, msg, false);
                                 }
 
                                 if (sendDebug) {
@@ -502,7 +500,7 @@ function MMOServer() {
                                         y: message.y,
                                         dir: message.dir,
                                     };
-                                    unicast (i, msg, true);
+                                    unicast(i, msg, true);
                                 }
                             }
 
