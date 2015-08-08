@@ -1,4 +1,7 @@
-nus-cs4344
+CS4344 Assignments
 ==========
 
-Teaching Materials for CS4344 Networked and Mobile Gaming
+Assignment 1 - 10/10
+Assignment 2 - 11/10
+Assignment 3 - 16/15
+
